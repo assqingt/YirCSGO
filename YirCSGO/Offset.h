@@ -1,0 +1,27 @@
+#pragma once
+#define dwLocalPlayer 0xCBD6B4
+#define dwEnemyPlayer 0x4CCDBFC
+#define dwForceAttack  0x30FF2A0
+#define dwForceAttack2  0x30FF2AC
+#define dwForceBackward  0x30FF2E8
+#define dwForceForward  0x30FF2F4
+#define dwForceJump  0x5170DB0
+#define dwForceLeft  0x30FF30C
+#define dwForceRight  0x30FF300
+#define dwViewMatrix  0x4CBF614
+#define dwPlayerHealth  0x100
+#define dwPlayerCamps  0xF4
+#define dwPlayerPlace  0x138
+#define dwPlayerDormant  0xED
+#define dwPlayerFov  0x31E4
+#define dwfFlags  0x104
+#define dwaimPunchAngleVel  0x3038
+#define dwaimPunchAngle 0x302C
+#define dwArmorValue 0xB328
+#define dwBoneMatrix 0x26A8
+#define dwGlowObjectManager 0x520DA28
+#define dwiGlowIndex 0xA3F8
+#define dwbSpottedByMask 0x980
+#define dwbSpottedByMask 0x980
+#define dwEngineState  0x58BCFC
+#define dwMouseAngles  0x4D10

@@ -1,33 +1,26 @@
 #include "main.h"
 HWND ghwnd = 0, hCSGOWindow = 0;
 bool gDraw = true, Cheat_Crosshair = true, Win_nShowUI = true, Cheat_BoxEsp = true, Cheat_BoneEsp = false, Cheat_LowObject = true,
-Cheat_Aimbot = false, Cheat_AutoPressueGun = false, Cheat_Spotted = true, Cheat_Team = true, Cheat_BhopJump = false;
+Cheat_Aimbot = true, Cheat_AutoPressueGun = false, Cheat_Spotted = true, Cheat_Team = true, Cheat_BhopJump = false;
 UINT Cl_Width = 0, Cl_Height = 0;
 MenuItem gMenItem[MenuItemNum] = { 0 };
 HANDLE HProcess = nullptr;
 DWORD_PTR ClientdllBase = 0, EnginedllBase = 0;
-int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nShowCmd) {
-	MAPO_VM_START
+BOOL WINAPI InitPrcoess() {
 	Process Prc;
 	DWORD pid = Prc.ProcessName2Pid(L"csgo.exe");
 	hCSGOWindow = Prc.Pid2Hwnd(pid);
 	//hCSGOWindow = FindWindow(L"Valve001",nullptr);
-	if (!hCSGOWindow) { MessageBox(nullptr, L"请先开启游戏!", nullptr, NULL); return 0; }
-	RECT rect = { 0 };
-	GetWindowRect(hCSGOWindow, &rect);
-	if (rect.right < 5 && rect.bottom < 5) {MessageBox(nullptr, L"游戏窗口信息获取失败!", nullptr, NULL); return 0;}
-	//判断窗口模式
-	UINT G_Left, G_Width, G_Top, G_Height;
-	G_Left = rect.left - 5, G_Width = (rect.right - rect.left) + 10, G_Top = rect.top - 5, G_Height = (rect.bottom - rect.top) + 10;
-	Cl_Height = G_Height;
-	Cl_Width = G_Width;
-	//ghwnd = initgraph(Init_Width, Init_Height);
-	ghwnd = initgraph(Init_Width, Init_Height);
-	SetWindowPos(ghwnd, HWND_TOPMOST, G_Left, G_Top, G_Width, G_Height, SWP_NOSENDCHANGING);
-	//SetWindowPos(ghwnd, HWND_TOPMOST, NULL, NULL, NULL, NULL, SWP_NOSIZE);
-	//设置窗口风格以及窗口透明度风格
-	SetWindowLong(ghwnd, GWL_EXSTYLE, WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW);
-	SetLayeredWindowAttributes(ghwnd, RGB(0, 0, 0), 255, LWA_COLORKEY);
+	if (!hCSGOWindow) { MessageBox(nullptr, L"请先开启游戏!", nullptr, NULL); return FALSE; }
+	//创建绘制线程和按键监控线程
+	HProcess = OpenProcess(PROCESS_ALL_ACCESS, false, pid);
+	if (HProcess == INVALID_HANDLE_VALUE) { MessageBox(nullptr, L"游戏进程打开失败,请确认是否管理员运行!", nullptr, MB_OK); return FALSE; }
+	ClientdllBase = Prc.GetModuleBaseAddr(L"client_panorama.dll", pid);
+	EnginedllBase = Prc.GetModuleBaseAddr(L"engine.dll", pid);
+	if (!EnginedllBase || !ClientdllBase) { MessageBox(nullptr, L"游戏基址获取失败,请确认是否管理员运行或游戏未运行!", nullptr, MB_OK); return FALSE; }
+	return TRUE;
+}
+void WINAPI InitMenu() {
 	LOGFONT fontr;
 	//获取原字体并修改成宋体
 	gettextstyle(&fontr);
@@ -50,12 +43,20 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 	AddMenuItem(L"自动连跳--F3", Menu_Cheat, CheatType_BhopJump, Cheat_BhopJump);
 	AddMenuItem(L"交流群:1314520", Menu_Other, CheatType_Other, false);
 	gMenItem[0].SelectItem = true;//默认选中菜单首项
-	//创建绘制线程和按键监控线程
-	HProcess = OpenProcess(PROCESS_ALL_ACCESS, false, pid);
-	if (HProcess == INVALID_HANDLE_VALUE) { MessageBox(nullptr, L"游戏进程打开失败,请确认是否管理员运行!", nullptr, MB_OK); return 0; }
-	ClientdllBase = Prc.GetModuleBaseAddr(L"client_panorama.dll", pid);
-	EnginedllBase = Prc.GetModuleBaseAddr(L"engine.dll", pid);
-	if (!EnginedllBase || !ClientdllBase) { MessageBox(nullptr, L"游戏基址获取失败,请确认是否管理员运行或游戏未运行!", nullptr, MB_OK); return 0; }
+}
+
+int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nShowCmd) {
+	MAPO_VM_START;
+	if (!InitPrcoess())ExitProcess(NULL);
+	ghwnd = initgraph(Init_Width, Init_Height);
+	//设置窗口风格 ----->窗口透明,鼠标穿透,不显示在任务栏;
+	SetWindowLong(ghwnd, GWL_EXSTYLE, WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW);
+	SetLayeredWindowAttributes(ghwnd, RGB(0, 0, 0), 255, LWA_COLORKEY);
+	// 初始化菜单;
+	InitMenu();
+	InitConsole();
+	printf("控制台安装成功\n");
+	//初始化程序线程;
 	CreateThread(nullptr, 0, (LPTHREAD_START_ROUTINE)DrawUIThread, nullptr, 0, nullptr);
 	CreateThread(nullptr, 0, (LPTHREAD_START_ROUTINE)KeyState, nullptr, 0, nullptr);
 	MSG msg;
@@ -176,7 +177,6 @@ void WINAPI KeyState() {
 		Process Prc;
 		if (!Prc.ProcessNameIsexits(L"csgo.exe"))ExitProcess(0);
 		if (GetAsyncKeyState(VK_HOME) & 0x8000)Win_nShowUI = !Win_nShowUI;
-		if (GetAsyncKeyState(VK_MENU) & 0x8000 && GetAsyncKeyState('9'))Cheat_Crosshair = !Cheat_Crosshair;
 #pragma region 菜单功能操作
 		if (GetAsyncKeyState(VK_UP) & 0x8000 && Win_nShowUI) {
 			for (int i = 0; i < MenuItemNum; i++) {
@@ -609,6 +609,8 @@ void WINAPI AimbotEntity() {
 		ReadGameMemory((LPVOID)(LocalPlayBase + dwPlayerPlace), &LoalPlayPlace, sizeof(LoalPlayPlace));
 		ReadGameMemory((LPVOID)(EnginedllBase + dwEngineState), &EngineStateBase, sizeof(EngineStateBase));
 		DWORD_PTR EntityListBase = ClientdllBase + dwEnemyPlayer;
+		D3DMATRIX ViewMatrix;
+		ReadGameMemory((LPVOID)(ClientdllBase + dwViewMatrix), &ViewMatrix, sizeof(ViewMatrix));
 		//循环遍历实体信息
 		for (int i = 0; i < MaxPlayerNum; i++)
 		{
@@ -627,10 +629,37 @@ void WINAPI AimbotEntity() {
 			ReadGameMemory((LPVOID)(EngineStateBase + dwMouseAngles), &MousAngles, sizeof(MousAngles));
 			float Angles[3];
 			if (EntityHealth > 0 && IsDormant == false) {
+				DWORD_PTR BoneAddress;
+				ReadGameMemory((LPVOID)(EntityAddress + dwBoneMatrix), &BoneAddress, sizeof(BoneAddress));
+				matrix_t BoneMatrix[128];
+				ReadGameMemory((LPVOID)(BoneAddress), &BoneMatrix, sizeof(BoneMatrix));
 				float Distance = fabsf(GetD3Distance(EntityPlace, LoalPlayPlace)) / 10.f;
-				if (Distance < 30.f) {
-					CalcAngle(LoalPlayPlace, EntityPlace, Angles);
-					WriteGameMemory((LPVOID)(EngineStateBase + dwMouseAngles), &Angles, sizeof(float[2]));
+				if (Distance < 130.f) {
+					/*D3DVECTOR localAngles, aimpunch;
+					float smoothed[2];
+					D3DVECTOR aimpunch = mem.ReadMemory<Vector>(csgo, localPlayer + aimPunch);
+					aimpunch.x = aimpunch.x * 2.f;
+					aimpunch.y = aimpunch.y * 2.f;
+					DWORD x = mem.ReadMemory<DWORD>(csgo, localPlayer + m_hActiveWeapon) & 0xfff;
+					DWORD y = mem.ReadMemory<DWORD>(csgo, client + entityList + (x - 1) * 0x10);
+					short z = mem.ReadMemory<short>(csgo, y + m_iItemDefinitionIndex);
+					localAngles = mem.ReadMemory<Vector>(csgo, clientbase + clientAngle);
+					CalcAngle(Players[0].Pos, Players[Ind].Pos, Players[Ind].Angle);
+					Smooth(aimpunch.x, aimpunch.y, Players[Ind].Angle, smoothed, localAngles, aimsmooth, z);
+					mem.WriteMemory<float>(csgo, clientbase + clientAngle, smoothed[0]);
+					mem.WriteMemory<float>(csgo, clientbase + clientAngle + 0x4, smoothed[1]);
+					lasttarget = Ind;*/
+					EntityPlace = { BoneMatrix[8][0][3],BoneMatrix[8][1][3] ,BoneMatrix[8][2][3] };
+					CalcAngle2(LoalPlayPlace, EntityPlace, Angles);
+					NormalizeAngle((D3DVECTOR*)&Angles);
+					Angles[0] /= 8.f;
+					printf("X:%f--Y:%f-Z:%f\n", Angles[0], Angles[1], Angles[2]);
+					CreenXY EntityCreen;
+					float Scale;
+					if (!WorldToScreen(EntityPlace, ViewMatrix, &EntityCreen, Cl_Width, Cl_Height, &Scale))continue;
+					solidcircle((int)(EntityCreen.x), (int)EntityCreen.y, 2);
+					line((int)(EntityCreen.x), (int)EntityCreen.y, (int)(EntityCreen.x), (int)EntityCreen.y - Cl_Height/2);
+					WriteGameMemory((LPVOID)(EngineStateBase + dwMouseAngles), &Angles, sizeof(Angles));
 				}
 			}
 		}

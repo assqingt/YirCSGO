@@ -35,24 +35,7 @@ float WINAPI FovToScale(UINT iFov,float Scale) {
 	}
 	return Scale;
 }
-bool WINAPI WorldToScreen2(D3DVECTOR lpEnemyVec, float **lpViewMatrix, CreenXY *lpCreenXY, UINT GameWidth, UINT GameHeight) {
-	float rew[2] = { 0 };
-	lpEnemyVec.x = lpEnemyVec.x*lpViewMatrix[0][0] + lpEnemyVec.y*lpViewMatrix[0][1] + lpEnemyVec.z*lpViewMatrix[0][2] + lpViewMatrix[0][3];
-	lpEnemyVec.y = lpEnemyVec.x*lpViewMatrix[1][0] + lpEnemyVec.y*lpViewMatrix[1][1] + lpEnemyVec.z*lpViewMatrix[1][2] + lpViewMatrix[1][3];
-	float w = lpEnemyVec.x*lpViewMatrix[3][0] + lpEnemyVec.y*lpViewMatrix[3][1] + lpEnemyVec.z*lpViewMatrix[3][2] + lpViewMatrix[3][3];
-	//float w = lpEnemyVec.x*lpViewMatrix._41 + lpEnemyVec.y*lpViewMatrix._42 + lpEnemyVec.z*lpViewMatrix._43 + lpViewMatrix._44;
-	if (w < 0.01f)return false;
-	float x = GameWidth / 2.f;
-	float y = GameHeight / 2.f;
-	float invm = 1.0f / w;
-	lpCreenXY->x *= invm;
-	lpCreenXY->y *= invm;
-	x += 0.5f*lpCreenXY->x*GameWidth + 0.5f;
-	y -= 0.5f*lpCreenXY->y*GameHeight + 0.5f;
-	lpCreenXY->x = x;
-	lpCreenXY->y = y;
-	return true;
-}
+
 float WINAPI GetD3Distance(D3DVECTOR lpEnemyVec, D3DVECTOR lpLocalVec) {
 	return sqrtf(powf(lpLocalVec.x - lpEnemyVec.x, 2.f) + powf(lpLocalVec.y - lpEnemyVec.y, 2.f) + powf(lpLocalVec.z - lpEnemyVec.z, 2.f));
 }
@@ -91,4 +74,57 @@ void WINAPI Smooth(float x, float y, float *src, float *back, D3DVECTOR flLocalA
 	else if (back[1] < -180.0f) back[1] = -180.0f;
 	back[2] = 0.f;
 
+}
+void WINAPI CalcAngle2(D3DVECTOR lpLocalPlace, D3DVECTOR lpEnemyPlace, float *angles)
+{
+	float tmp, yaw, pitch;
+	float forward[3] = { lpEnemyPlace.x - lpLocalPlace.x,lpEnemyPlace.y - lpLocalPlace.y,lpEnemyPlace.z - lpLocalPlace.z };
+
+	if (forward[1] == 0 && forward[0] == 0)
+	{
+		yaw = 0;
+		if (forward[2] > 0)
+			pitch = 270;
+		else
+			pitch = 90;
+	}
+	else
+	{
+		yaw = (atan2(forward[1], forward[0]) * 180.f / M_PI);
+		if (yaw < 0)
+			yaw += 360.f;
+
+		tmp = sqrt(forward[0] * forward[0] + forward[1] * forward[1]);
+		pitch = (atan2(-forward[2], tmp) * 180.f / M_PI);
+		if (pitch < 0)
+			pitch += 360.f;
+	}
+
+	angles[0] = pitch;
+	angles[1] = yaw;
+	angles[2] = 0;
+}
+void WINAPI NormalizeAngle(D3DVECTOR *angle)
+{
+	while (angle->x > 89.f)
+	{
+		angle->x -= 180.f;
+	}
+	while (angle->x < -89.f)
+	{
+		angle->x += 180.f;
+	}
+	if (angle->y > 180)
+	{
+		angle->y -= (round(angle->y / 360) * 360.f);
+	}
+	else if (angle->y < -180)
+	{
+		angle->y += (round(angle->y / 360) * -360.f);
+	}
+	if ((angle->z > 50) || (angle->z < 50))
+	{
+		angle->z = 0;
+	}
+	return;
 }

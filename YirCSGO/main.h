@@ -10,7 +10,9 @@
 #include "Process.h"
 #include "Module.h"
 #include "Offset.h"
+#include "Debug.h"
 
+#define _wsp_sdk_
 #define Init_Width 1920
 #define Init_Height 1080
 #pragma region ²Ëµ¥Ïîºê
@@ -117,6 +119,7 @@ struct GlowBase
 };
 typedef float matrix_t[3][4];
 #pragma pack(pop)
+
 void WINAPI DrawUIThread();
 void WINAPI DrawTrajectoryCrosshair(int x, int y);
 void WINAPI KeyState();
@@ -134,3 +137,5 @@ void WINAPI DrawBoneEsp(UINT GameWidth, UINT GameHeight);
 void WINAPI LowObjectEsp();
 bool WINAPI EntIsVisible(DWORD ent, DWORD local);
 void WINAPI AimbotEntity();
+BOOL WINAPI InitPrcoess();
+void WINAPI InitMenu();
